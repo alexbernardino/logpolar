@@ -54,7 +54,7 @@ private:
 
 protected:
 	template <class inType, class outType>
-	void _logmap(inType *cart, outType *log, outType *fov)
+	void _logmap_rowfirstorder(inType *cart, outType *log, outType *fov)
 	{
 		int i, j, k, index, np, counter = 0;		
 		float temp;
@@ -81,19 +81,73 @@ protected:
 			}
 		}
 	}
-
+	
 	template <class inType, class outType>
-	void _invmap(inType *log, inType *fov, outType *cart)
+	void _logmap_columnfirstorder(inType *cart, outType *log, outType *fov)
+	{
+		int i, j, k, index, np, counter = 0;		
+		float temp;
+		for(i = 0; i < m_sensor_lines; i++) {
+			for( j = 0; j < m_sensor_columns; j++) {
+				np = m_num_pix_in_cell[ i + j*m_sensor_lines ];
+				if(np == 0)
+					np = 1;					
+				temp = 0.0f;
+				for(k = 0; k < np; k++) {
+					index = m_pix_index_array[ counter++ ];
+					temp += cart[ index ];
+				}
+				log[  i + j*m_sensor_lines ] = (outType)(temp/np);				
+			}
+		}
+
+		if( fov != NULL )
+		{
+			for(i = 0; i < m_iFoveaPixels; i++ )
+			{
+				index = m_fovea_index_array[i];
+				fov[i] = (outType)(cart[index]);
+			}
+		}
+	}
+	
+	template <class inType, class outType>
+	void _invmap_rowfirstorder(inType *log, inType *fov, outType *cart)
 	{
 		int i, j, k, index, np, counter=0;
 		for(i = 0; i < m_sensor_lines; i++) {
 			for(j = 0; j < m_sensor_columns; j++) {
-				np = m_num_pix_in_cell[ i*m_sensor_columns + j ];
+				np = m_num_pix_in_cell[  i*m_sensor_columns + j ];
 				if(np == 0)
 					np = 1;
 				for(k = 0; k < np; k++) {
 					index = m_pix_index_array[ counter++ ];
-					cart[ index ] = (outType)log[ i*m_sensor_columns + j ];			
+					cart[ index ] = (outType)log[  i*m_sensor_columns + j ];			
+				}
+			}
+		}
+		if( fov != NULL )
+		{
+			for( i = 0; i < m_iFoveaPixels; i++ )
+			{
+				index = m_fovea_index_array[i];
+				cart[index] = (outType)(fov[i]);
+			}
+		}
+	}
+
+	template <class inType, class outType>
+	void _invmap_columnfirstorder(inType *log, inType *fov, outType *cart)
+	{
+		int i, j, k, index, np, counter=0;
+		for(i = 0; i < m_sensor_lines; i++) {
+			for(j = 0; j < m_sensor_columns; j++) {
+				np = m_num_pix_in_cell[  i + j*m_sensor_lines  ];
+				if(np == 0)
+					np = 1;
+				for(k = 0; k < np; k++) {
+					index = m_pix_index_array[ counter++ ];
+					cart[ index ] = (outType)log[  i + j*m_sensor_lines  ];			
 				}
 			}
 		}
@@ -109,7 +163,7 @@ protected:
 
 	//OVERLOADING FOR INTERLACED COLOR IMAGES
 	template <class inType, class outType>
-	void _logmap(inType *cart, outType *log, outType *fov, int nChannels)
+	void _logmap_rowfirstorder(inType *cart, outType *log, outType *fov, int nChannels)
 	{
 		int i, j, k, c, index, np, counter = 0;
 		float temp[10];  
@@ -148,7 +202,7 @@ protected:
 	}
 	
 	template <class inType, class outType>
-	void _invmap(inType *log, inType *fov, outType *cart, int nChannels)
+	void _invmap_rowfirstorder(inType *log, inType *fov, outType *cart, int nChannels)
 	{
 		int i, j, k, c, index, np, counter = 0;
 		for(i = 0; i < m_sensor_lines; i++) {
@@ -160,6 +214,75 @@ protected:
 					index = m_pix_index_array[ counter++ ];
 					for(c = 0; c < nChannels; c++) {
 						cart[ index*nChannels + c ] = (outType)log[ (i*m_sensor_columns+j)*nChannels + c ];			
+					}
+				}
+			}
+		}
+
+		if( fov != NULL )
+		{
+			for( i = 0; i < m_iFoveaPixels; i++ )
+			{
+				index = m_fovea_index_array[i];
+				for(c = 0; c < nChannels; c++) {
+					cart[index*nChannels + c] = (outType)(fov[i*nChannels+c]);
+				}
+			}
+		}
+	}
+	
+	template <class inType, class outType>
+	void _logmap_columnfirstorder(inType *cart, outType *log, outType *fov, int nChannels)
+	{
+		int i, j, k, c, index, np, counter = 0;
+		float temp[10];  
+		ATLASSERT(nChannels <= 10);
+		for(i = 0; i < m_sensor_lines; i++) {
+			for(j = 0; j < m_sensor_columns; j++) {
+				np = m_num_pix_in_cell[ i + j*m_sensor_lines ];
+				if(np == 0)
+					np = 1;					
+				for(c = 0; c < nChannels; c++) {
+					temp[c] = 0.0;
+				}
+				for(k = 0; k < np; k++) {
+					index = m_pix_index_array[ counter++ ];						
+					for(c = 0; c < nChannels; c++) {
+						temp[c] += cart[ index*nChannels + c ];
+					}						
+				}
+				for(c = 0; c < nChannels; c++) {
+					log[ (i + j*m_sensor_lines)*nChannels + c ] = (outType)(temp[c]/np);
+				}
+			}
+		}
+
+		if( fov != NULL )
+		{
+			for(i = 0; i < m_iFoveaPixels; i++ )
+			{
+				index = m_fovea_index_array[i];
+				//fov[i] = cart[index];
+				for(c = 0; c < nChannels; c++) {
+					fov[i*nChannels+c] = cart[ index*nChannels + c ];
+				}						
+			}
+		}
+	}
+	
+	template <class inType, class outType>
+	void _invmap_columnfirstorder(inType *log, inType *fov, outType *cart, int nChannels)
+	{
+		int i, j, k, c, index, np, counter = 0;
+		for(i = 0; i < m_sensor_lines; i++) {
+			for(j = 0; j < m_sensor_columns; j++) {
+				np = m_num_pix_in_cell[ i + j*m_sensor_lines ];
+				if(np == 0)
+					np = 1;
+				for(k = 0; k < np; k++) {
+					index = m_pix_index_array[ counter++ ];
+					for(c = 0; c < nChannels; c++) {
+						cart[ index*nChannels + c ] = (outType)log[ (i + j*m_sensor_lines)*nChannels + c ];			
 					}
 				}
 			}
@@ -297,12 +420,6 @@ public:
 
 	virtual int map_coordinates(float x, float y, float *u, float *v)
 	{			
-		/*if(!m_bValidData)
-		{
-			static_cast<_DERIVED_ *>(this)->Error("Object not created");
-			return -1;
-		}*/
-
 		float rho = (float)sqrt(x*x + y*y);
 		float theta = (float)atan2(y,x);
 		float csi = (float)log((rho+m_fLogShift)/(m_fRhoMin+m_fLogShift))/(float)log(m_fLogFact);
@@ -322,12 +439,6 @@ public:
 
 	virtual int invmap_coordinates(float u, float v, float *x, float *y)
 	{		
-		/*if(!m_bValidData)
-		{
-			static_cast<_DERIVED_ *>(this)->Error("Object not created");
-			return -1;
-		}*/
-
 		float rho = (m_fRhoMin+m_fLogShift)*(float)pow(m_fLogFact,u) - m_fLogShift;
 		float theta = v*2.0f*pi/m_sensor_lines;
 		*x = rho*(float)cos(theta);
@@ -480,7 +591,7 @@ public:
 		return 0;
 	}
 
-	int create_logpolar_sensor()
+	int create_logpolar_sensor_rowfirstorder()
 	{
 		float xi, yi, xm, ym, cr, ca;
 		int i,j; //general integer for-loop indexes		
@@ -495,20 +606,17 @@ public:
 		if( compute_encoder_parameters(m_f_image_plane_height, m_f_image_plane_width,
 				&m_sensor_lines, &m_sensor_columns, &m_fRhoMin, &m_fLogFact, &m_fLogShift, &m_fFirstRho)==0)	
 		{
-			//static_cast<_DERIVED_ *>(this)->Error("Invalid Object Properties");
 			return -1;
 		}
 
 		// memory allocation
 		m_num_pix_in_cell = (int*)calloc(m_sensor_lines*m_sensor_columns, sizeof(int));
 		if(m_num_pix_in_cell == NULL) {
-			//static_cast<_DERIVED_ *>(this)->Error("Out of Memory");
 			return -1; //memory error
 		}
 				
 		m_pix_index_list = (tLPSListElem **)calloc( m_sensor_lines*m_sensor_columns, sizeof(tLPSListElem*) );
 		if( m_pix_index_list == NULL )	{
-			//static_cast<_DERIVED_ *>(this)->Error("Out of Memory");
 			return -1;  //memory error
 		}
 
@@ -533,7 +641,6 @@ public:
 					m_iFoveaPixels++;
 					ptr = (tLPSListElem*)calloc(1,sizeof(tLPSListElem));
 					if( ptr == NULL )	{	 //out of memory
-						//static_cast<_DERIVED_ *>(this)->Error("Out of Memory");
 						return -1;
 					}
 					ptr->cart_index = i*m_i_image_frame_columns + j;
@@ -548,7 +655,6 @@ public:
 					m_num_pix_in_cell[ da*m_sensor_columns + dr ] += 1;
 					ptr = (tLPSListElem*)calloc(1,sizeof(tLPSListElem));
 					if( ptr == NULL )	{	 //out of memory
-						//static_cast<_DERIVED_ *>(this)->Error("Out of Memory");
 						return -1;
 					}
 					ptr->cart_index = i*m_i_image_frame_columns + j;
@@ -575,7 +681,6 @@ public:
 					
 					ptr=(tLPSListElem*)calloc(1,sizeof(tLPSListElem));
 					if( ptr == NULL ) {  //out of memory
-						//static_cast<_DERIVED_ *>(this)->Error("Out of Memory");
 						return -1;
 					}
 					ptr->cart_index = dy*m_i_image_frame_columns + dx;
@@ -588,7 +693,6 @@ public:
 		// constructing sparse matrices
 		m_pix_index_array = (int*)calloc(m_iNumPixels, sizeof(int));
 		if(m_pix_index_array == NULL) {
-			//static_cast<_DERIVED_ *>(this)->Error("Out of Memory");
 			return -1; //memory error
 		}
 
@@ -608,7 +712,144 @@ public:
 
 		m_fovea_index_array = (int*)calloc(m_iFoveaPixels, sizeof(int));
 		if(m_fovea_index_array == NULL) {
-			//static_cast<_DERIVED_ *>(this)->Error("Out of Memory");
+			return -1; //memory error
+		}
+
+		ptr = fovea_list;
+		for( i = 0; i < m_iFoveaPixels; i++ )
+		{
+			m_fovea_index_array[i] = ptr->cart_index;
+			temp = ptr;
+			ptr = ptr->next;
+			free(temp);
+		}
+
+		m_bValidData = true;
+		
+		return 0;
+	}
+	
+	int create_logpolar_sensor_columnfirstorder()
+	{
+		float xi, yi, xm, ym, cr, ca;
+		int i,j; //general integer for-loop indexes		
+		int dr, da, dx, dy;
+		tLPSListElem *ptr, *temp, *fovea_list = NULL;
+		
+			
+		if(m_bValidData)
+			destroy_logpolar_sensor();
+
+		m_fLogFact = -1;
+		if( compute_encoder_parameters(m_f_image_plane_height, m_f_image_plane_width,
+				&m_sensor_lines, &m_sensor_columns, &m_fRhoMin, &m_fLogFact, &m_fLogShift, &m_fFirstRho)==0)	
+		{
+			return -1;
+		}
+
+		// memory allocation
+		m_num_pix_in_cell = (int*)calloc(m_sensor_lines*m_sensor_columns, sizeof(int));
+		if(m_num_pix_in_cell == NULL) {
+			return -1; //memory error
+		}
+				
+		m_pix_index_list = (tLPSListElem **)calloc( m_sensor_lines*m_sensor_columns, sizeof(tLPSListElem*) );
+		if( m_pix_index_list == NULL )	{
+			return -1;  //memory error
+		}
+
+		m_iNumPixels = 0;
+		m_iFoveaPixels = 0;
+		for( i = 0; i < m_sensor_lines*m_sensor_columns; i++)		{
+			m_num_pix_in_cell[i] = 0;
+			m_pix_index_list[i] = NULL;
+		}
+
+		// filling luts		
+		for( i = 0 ; i < m_i_image_frame_lines; i++ )		{
+			for( j = 0; j < m_i_image_frame_columns ; j++ )			{				
+				//measurements in the center of the pixel
+				image_frame_to_pixel(j+0.5f,i+0.5f, &xm, &ym);			
+				pixel_to_image_plane(xm, ym, &xm, &ym);							
+				map_coordinates(xm, ym, &cr, &ca ); 
+				dr = (int)cr;
+				da = (int)ca;
+				if(dr < 0)    //belongs to fovea
+				{
+					m_iFoveaPixels++;
+					ptr = (tLPSListElem*)calloc(1,sizeof(tLPSListElem));
+					if( ptr == NULL )	{	 //out of memory
+						return -1;
+					}
+					ptr->cart_index = i + j*m_i_image_frame_lines;
+					// insert at beginning of fovea list
+					ptr->next = fovea_list;
+					fovea_list = ptr;
+				}
+
+				if( (dr >= 0) && (dr < m_sensor_columns))
+				{
+					m_iNumPixels++;
+					m_num_pix_in_cell[ da + dr*m_sensor_lines ] += 1;
+					ptr = (tLPSListElem*)calloc(1,sizeof(tLPSListElem));
+					if( ptr == NULL )	{	 //out of memory
+						return -1;
+					}
+					ptr->cart_index = i + j*m_i_image_frame_lines;
+					// insert at beginning of list
+					ptr->next = m_pix_index_list[ da + dr*m_sensor_lines];
+					m_pix_index_list[da + dr*m_sensor_lines] = ptr;
+				}
+			}
+		}
+		//dealing with empty cells
+		//bool use_left, use_top; // flags for deciding interpolating pixels
+		for( i = 0 ; i < m_sensor_lines ; i++ ) {
+			for( j = 0 ; j < m_sensor_columns ; j++ )  {
+				if( m_num_pix_in_cell[ i + j*m_sensor_lines ] == 0) {
+					//compute the closest cartesian pixel
+					cr = j+0.5f;
+					ca = i+0.5f;
+					invmap_coordinates( cr , ca , &xm , &ym );
+					image_plane_to_pixel(xm, ym, &xi, &yi);											
+					pixel_to_image_frame(xm, ym, &xi, &yi);
+
+					dx = (int)xi;
+					dy = (int)yi;
+					
+					ptr=(tLPSListElem*)calloc(1,sizeof(tLPSListElem));
+					if( ptr == NULL ) {  //out of memory
+						return -1;
+					}
+					ptr->cart_index = dy + dx*m_i_image_frame_lines;
+					ptr->next = m_pix_index_list[ i + j*m_sensor_lines ];
+					m_pix_index_list[ i + j*m_sensor_lines] = ptr;
+					m_iNumPixels++;	 
+				}
+			}
+		}		
+		// constructing sparse matrices
+		m_pix_index_array = (int*)calloc(m_iNumPixels, sizeof(int));
+		if(m_pix_index_array == NULL) {
+			return -1; //memory error
+		}
+
+		int counter = 0;
+		for(i = 0; i < m_sensor_lines; i++) {
+			for(j = 0; j < m_sensor_columns; j++) {		
+				ptr = m_pix_index_list[ i + j*m_sensor_lines ];
+				while(ptr != NULL) {
+					m_pix_index_array[counter++] = ptr->cart_index;
+					temp = ptr;
+					ptr = ptr->next;
+					free(temp);
+				}	
+			}
+		}
+		free(m_pix_index_list);
+
+		m_fovea_index_array = (int*)calloc(m_iFoveaPixels, sizeof(int));
+		if(m_fovea_index_array == NULL) {
 			return -1; //memory error
 		}
 
@@ -629,76 +870,62 @@ public:
 	
 	int get_rho_min(float *pVal)
 	{
-		// TODO: Add your implementation code here
 		*pVal = m_fRhoMin;
 		return 0;
 	}
 
 	int get_fovea_pix(long *pVal)
 	{
-		// TODO: Add your implementation code here
 		*pVal = m_iFoveaPixels;
 		return 0;
 	}
 
 	int put_rho_min(float newVal)
 	{
-		// TODO: Add your implementation code here
 		if(newVal <= 0.0f)
 			return 1;
 
 		m_fRhoMin = newVal;
 
-		//recompute log-fact
 		compute_log_fact(&m_fLogFact);
-		//static_cast<_DERIVED_ *>(this)->SetDirty(TRUE);
 		return 0;
 	}
 
 	int get_log_fact(float *pVal)
 	{
-		// TODO: Add your implementation code here
 		*pVal = m_fLogFact;
 		return 0;
 	}
 
 	int put_log_fact(float newVal)
-	{
-		// TODO: Add your implementation code here	
+	{	
 		m_fLogFact = newVal;	
-		//static_cast<_DERIVED_ *>(this)->SetDirty(TRUE);
 		return 0;
 	}
 
 	int get_log_shift(float *pVal)
 	{
-		// TODO: Add your implementation code here
 		*pVal = m_fLogShift;
 		return 0;
 	}
 
 	int put_log_shift(float newVal)
 	{
-		// TODO: Add your implementation code here	
 		m_fLogShift = newVal;	
 		//recompute log-fact
 		compute_log_fact(&m_fLogFact);
-		//static_cast<_DERIVED_ *>(this)->SetDirty(TRUE);
 		return 0;
 	}
 
 	int get_first_rho(float *pVal)
 	{
-		// TODO: Add your implementation code here
 		*pVal = m_fFirstRho;
 		return 0;
 	}
 
 	int put_first_rho(float newVal)
 	{
-		// TODO: Add your implementation code here	
 		m_fFirstRho = newVal;	
-		//static_cast<_DERIVED_ *>(this)->SetDirty(TRUE);
 		return 0;
 	}
 };

@@ -10,7 +10,7 @@ class CMySensor : public CLogPolarCam
 public:
 	void logmap_matlab(double *cart, double *log, double *fov)
 	{
-		_logmap(cart, log, fov);
+		_logmap_columnfirstorder(cart, log, fov);
 	}
 };
 
@@ -23,7 +23,12 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	// check correct number of dimensions
     if( mxGetNumberOfDimensions(prhs[0]) != 2)
 		mexErrMsgTxt("Input matrix must be 2-dimensional\n");
-    
+		
+	// check if data type is double
+	
+	if(!mxIsDouble(prhs[0]))
+		mexErrMsgTxt("Input matrix must be of type double\n");
+		
 	// check valid sizes
 	const mwSize* psz_in =  mxGetDimensions(prhs[0]);
 	int rows, cols;
@@ -39,11 +44,11 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	cam.put_sensor_lines(64);
 	cam.put_sensor_columns(32);
 	cam.put_rho_min(5);
-	cam.create_logpolar_sensor();
+	cam.create_logpolar_sensor_columnfirstorder();
 	long fov_pix;
 	cam.get_fovea_pix(&fov_pix);
 	
-	plhs[1] = mxCreateDoubleMatrix(1,fov_pix*10, mxREAL);
+	plhs[1] = mxCreateDoubleMatrix(1,fov_pix, mxREAL);
 	plhs[0] = mxCreateDoubleMatrix(64, 32, mxREAL);
 	
 	double *pin, *pout_periph, *pout_fov;
