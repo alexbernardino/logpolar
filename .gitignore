@@ -166,4 +166,4 @@ pip-log.txt
 ## Matlab
 #############
 
-.mexw64
+*.mexw64
