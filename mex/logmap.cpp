@@ -1,63 +1,64 @@
-/// Usage: [periph, fovea] = logmap(input)
-/// Arguments: input - 2D array
-///            output - 2D array
+/// Usage: [periph_img, fovea_pix] = logmap(handle, input_img)
+/// Arguments:input:  handle - pointer to the logpolar sensor (previously created with openlps) 
+///           output: periph_image - matrix with image in logpolar coordinates
+///                   fovea_pix - array with the fovea pixels (not topologically organized)
 
 #include "mex.h"
-#include "CLogPolarCam.h" 
+#include "lps.h" 
 
-class CMySensor : public CLogPolarCam
-{
-public:
-	void logmap_matlab(double *cart, double *log, double *fov)
-	{
-		_logmap_columnfirstorder(cart, log, fov);
-	}
-};
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {
     // check correct number of arguments
-    if( (nlhs!=2) || (nrhs!=1) )
-		mexErrMsgTxt("Please use as: [<periphery_pixels>, <fovea_pixels>] = logmap(<input_img>)\n");
-		
-	// check correct number of dimensions
-    if( mxGetNumberOfDimensions(prhs[0]) != 2)
+    if( (nlhs!=2) || (nrhs!=2) )
+		mexErrMsgTxt("Please use as: [<periph_img>, <fovea_pix>] = logmap(<sensor_handle>, <input_img>)\n");
+	
+	// check correct handle type
+	if(!mxIsUint64(prhs[0]))
+		mexErrMsgTxt("Invalid handle\n");
+	if(mxIsEmpty(prhs[0]))
+		mexErrMsgTxt("Invalid handle\n");
+	
+	//get handle
+	unsigned long long *pointer = (unsigned long long *)mxGetData(prhs[0]);
+	CMatlabLogPolarCam *cam = (CMatlabLogPolarCam *)pointer[0];
+	if( cam->id != CMATLABLOGPOLARCAMHANDLEID )
+		mexErrMsgTxt("Invalid object\n");
+	
+	//get sensor parameters
+	long cart_lines, cart_cols, log_lines, log_cols, fov_pix;
+	cam->get_image_frame_lines(&cart_lines);
+	cam->get_image_frame_columns(&cart_cols);
+    cam->get_sensor_lines(&log_lines);
+	cam->get_sensor_columns(&log_cols);
+	cam->get_fovea_pix(&fov_pix);
+	
+	// check image
+    if( mxGetNumberOfDimensions(prhs[1]) != 2)
 		mexErrMsgTxt("Input matrix must be 2-dimensional\n");
 		
 	// check if data type is double
-	
-	if(!mxIsDouble(prhs[0]))
+	if(!mxIsDouble(prhs[1]))
 		mexErrMsgTxt("Input matrix must be of type double\n");
 		
-	// check valid sizes
-	const mwSize* psz_in =  mxGetDimensions(prhs[0]);
+	// check coherent sizes
+	const mwSize* psz_in =  mxGetDimensions(prhs[1]);
 	int rows, cols;
 	rows = psz_in[0];
 	cols = psz_in[1];
-	if( ( rows < 2) || ( cols < 2) )
-		mexErrMsgTxt("Input matrix should be proper (lines and columns bigger than 1) \n");
-		
-	//Create log polar sensor
-	CMySensor cam;
-	cam.put_image_frame_columns(cols);
-	cam.put_image_frame_lines(rows);
-	cam.put_sensor_lines(64);
-	cam.put_sensor_columns(32);
-	cam.put_rho_min(5);
-	cam.create_logpolar_sensor_columnfirstorder();
-	long fov_pix;
-	cam.get_fovea_pix(&fov_pix);
+	if( ( rows != cart_lines) || ( cols !=  cart_cols) )
+		mexErrMsgTxt("Input matrix must have dimensions coherent with log polar sensor specification\n");
 	
+	plhs[0] = mxCreateDoubleMatrix(log_lines, log_cols, mxREAL);
 	plhs[1] = mxCreateDoubleMatrix(1,fov_pix, mxREAL);
-	plhs[0] = mxCreateDoubleMatrix(64, 32, mxREAL);
 	
 	double *pin, *pout_periph, *pout_fov;
 	
-	pin = mxGetPr(prhs[0]);
+	pin = mxGetPr(prhs[1]);
 	pout_periph = mxGetPr(plhs[0]);
 	pout_fov = mxGetPr(plhs[1]);
 	
-	cam.logmap_matlab(pin, pout_periph, pout_fov);
+	cam->logmap_matlab(pin, pout_periph, pout_fov);
 	
     return;
 }
