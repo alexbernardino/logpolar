@@ -1,5 +1,5 @@
-#ifndef LPS_H
-#define LPS_H
+#ifndef MLPS_H
+#define MLPS_H
 
 //Define a logpolar_cam object for use with matlab
 
@@ -16,6 +16,10 @@ public:
 	{
 		_logmap_columnfirstorder(cart, log, fov);
 	}
+	void invmap_matlab(double *log, double *fov, double *cart)
+	{
+		_invmap_columnfirstorder(log, fov, cart);
+	}
 };
 
-#endif
+#endif // MLPS_H

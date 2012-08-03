@@ -2,7 +2,7 @@
 /// Arguments: handle - pointer to the logpolar sensor (previously created with openlps) 
 
 #include "mex.h"
-#include "lps.h" 
+#include "mlps.h" 
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 {

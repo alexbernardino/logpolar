@@ -4,7 +4,7 @@
 ///                   fovea_pix - array with the fovea pixels (not topologically organized)
 
 #include "mex.h"
-#include "lps.h" 
+#include "mlps.h" 
 
 
 void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
