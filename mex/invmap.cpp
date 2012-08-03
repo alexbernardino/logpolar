@@ -36,10 +36,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 	
 	// check input data
     if( mxGetNumberOfDimensions(prhs[1]) != 2)
-		mexErrMsgTxt("Input logpolar image must be 2-dimensional\n");
+		mexErrMsgTxt("Invalid input logpolar image.\n");
 		
-	if( mxGetNumberOfDimensions(prhs[2]) != 1)
-		mexErrMsgTxt("Input fovea pixels must be 1-dimensional array \n");
+	if( mxGetNumberOfDimensions(prhs[2]) != 2)
+		mexErrMsgTxt("Invalid input fovea pixels\n");
 		
 		
 	// check if data type is double
@@ -55,9 +55,10 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 		mexErrMsgTxt("Input logpolar image must have dimensions coherent with log polar sensor specification\n");
 	
 	const mwSize* psz_in2 =  mxGetDimensions(prhs[2]);
-	int sz;
-	sz = psz_in[0];
-	if( sz != fov_pix ) )
+	int sz1, sz2;
+	sz1 = psz_in2[0];
+	sz2 = psz_in2[1];
+	if( sz1*sz2 != fov_pix ) 
 		mexErrMsgTxt("Input fovea array must have dimensions coherent with log polar sensor specification\n");
 	
 	

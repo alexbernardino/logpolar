@@ -4,7 +4,7 @@
 imdata = imread('ngc6543a.jpg');
 
 %must convert to gray scale and double since right now the function only accepts these modalities.
-img = double(rgb2gray(imdata));
+img = double(rgb2gray(imdata) > 0) ;
 [l,c] = size(img);
 
 %show the original image
@@ -18,6 +18,12 @@ lps = openlps(l,c,64,32,5);
 
 %show the logpolar image
 figure(2); imshow(log,[]);
+
+%invoke the invmap function
+rec = invmap(lps,log,fov);
+
+%show the retinal image
+figure(3); imshow(rec,[]);
 
 %destroy the log polar object
 closelps(lps);
