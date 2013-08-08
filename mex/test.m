@@ -4,7 +4,7 @@
 imdata = imread('ngc6543a.jpg');
 
 %must convert to gray scale and double since right now the function only accepts these modalities.
-img = double(rgb2gray(imdata) > 0) ;
+img = double(rgb2gray(imdata)) ;
 [l,c] = size(img);
 
 %show the original image

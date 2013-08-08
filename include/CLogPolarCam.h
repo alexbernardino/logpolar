@@ -167,7 +167,11 @@ protected:
 	{
 		int i, j, k, c, index, np, counter = 0;
 		float temp[10];  
-		ATLASSERT(nChannels <= 10);
+		if(nChannels > 10)
+        {
+            printf("Error: Cannot work with images with more than 10 channels");
+            return;
+        }
 		for(i = 0; i < m_sensor_lines; i++) {
 			for(j = 0; j < m_sensor_columns; j++) {
 				np = m_num_pix_in_cell[ i*m_sensor_columns + j ];
@@ -236,7 +240,11 @@ protected:
 	{
 		int i, j, k, c, index, np, counter = 0;
 		float temp[10];  
-		ATLASSERT(nChannels <= 10);
+		if(nChannels > 10)
+        {
+            printf("Cannot work with more than 10 channels");
+            return;
+        };
 		for(i = 0; i < m_sensor_lines; i++) {
 			for(j = 0; j < m_sensor_columns; j++) {
 				np = m_num_pix_in_cell[ i + j*m_sensor_lines ];
